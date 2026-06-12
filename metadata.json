@@ -1,0 +1,6 @@
+{
+  "name": "Kortex Imessage Gateway",
+  "description": "Distributed macOS iMessage/SMS relay architecture with Central Cloud Hub queueing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

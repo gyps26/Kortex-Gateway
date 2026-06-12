@@ -1,0 +1,32 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { connectToDatabase } from '../../../lib/db/mongoose';
+import { Profile } from '../../../models/Profile';
+
+export async function PUT(req: NextRequest) {
+    try {
+        const body = await req.json();
+        const { workerId, dailyLimit, assignedLocationId, name } = body;
+
+        if (!workerId) {
+            return NextResponse.json({ error: 'Missing workerId' }, { status: 400 });
+        }
+
+        await connectToDatabase();
+
+        const profile = await Profile.findOne({ workerId });
+        if (!profile) {
+            return NextResponse.json({ error: 'Worker not found' }, { status: 404 });
+        }
+
+        if (dailyLimit !== undefined) profile.dailyLimit = dailyLimit;
+        if (assignedLocationId !== undefined) profile.assignedLocationId = assignedLocationId;
+        if (name !== undefined) profile.name = name;
+
+        await profile.save();
+
+        return NextResponse.json({ success: true, profile });
+    } catch (error: any) {
+        console.error('Error updating worker:', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+}
