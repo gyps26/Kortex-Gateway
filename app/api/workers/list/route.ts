@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { connectToDatabase } from '../../../../lib/db/mongoose';
 import { Profile } from '../../../../models/Profile';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     try {
         await connectToDatabase();

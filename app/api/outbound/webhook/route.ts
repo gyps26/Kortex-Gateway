@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { connectToDatabase } from '../../../../lib/db/mongoose';
 import { Message } from '../../../../models/Message';
-import { outboundQueue } from '../../../../lib/queue/redis';
+import { Profile } from '../../../../models/Profile';
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,12 +24,13 @@ export async function POST(req: NextRequest) {
 
     const body = JSON.parse(rawBody);
     
-    // GHL sends sms body differently depending on if it's a Workflow Webhook or a Custom SMS Provider
-    const contactId = body.contact_id || body.contactId;
-    const phoneNum = body.phone || body.to;
-    const msgBody = body.message || body.body;
-    const locId = body.location_id || body.locationId;
-    const ghlMsgId = body.messageId || body.message_id;
+    // GHL sends sms body differently depending on if it's a Workflow Webhook, Custom Action, or Custom SMS Provider
+    const customData = body.customData || {};
+    const contactId = body.contact_id || body.contactId || body.contact?.id;
+    const phoneNum = body.phone || body.to || customData.phone || body.contact?.phone;
+    const msgBody = body.message || body.body || customData.message || customData.body;
+    const locId = body.location_id || body.locationId || body.location?.id;
+    const ghlMsgId = body.messageId || body.message_id || `wf_${Date.now()}`;
     const attachments = body.attachments || [];
 
     if (!phoneNum || !msgBody || !locId) {
@@ -50,9 +51,37 @@ export async function POST(req: NextRequest) {
       status: 'pending'
     });
 
-    // 2. Push to Redis queue
-    if (outboundQueue) {
-      await outboundQueue.add('send_sms', { messageId: newMessage._id });
+    // 2. Assign to active Mac Worker immediately
+    const activeProfiles = await Profile.find({ 
+        status: 'active',
+        assignedLocationId: locId
+    }).sort({ lastPing: -1 });
+
+    let selectedProfile = null;
+    for (const profile of activeProfiles) {
+        const now = new Date();
+        const lastReset = profile.lastReset || new Date(0);
+        if (now.getDate() !== lastReset.getDate() || now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
+            profile.dailyCount = 0;
+            profile.lastReset = now;
+            await profile.save();
+        }
+
+        if (profile.dailyCount < (profile.dailyLimit || 50)) {
+            selectedProfile = profile;
+            break;
+        }
+    }
+
+    if (selectedProfile) {
+        newMessage.workerId = selectedProfile.workerId;
+        newMessage.status = 'queued';
+        await newMessage.save();
+        
+        selectedProfile.dailyCount += 1;
+        await selectedProfile.save();
+    } else {
+        console.warn(`No active Mac Workers available for location ${locId} to process message!`);
     }
 
     return NextResponse.json({ success: true, messageId: newMessage._id });

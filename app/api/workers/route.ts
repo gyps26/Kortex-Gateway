@@ -30,3 +30,26 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
+
+export async function DELETE(req: NextRequest) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const workerId = searchParams.get('workerId');
+
+        if (!workerId) {
+            return NextResponse.json({ error: 'Missing workerId' }, { status: 400 });
+        }
+
+        await connectToDatabase();
+        
+        const profile = await Profile.findOneAndDelete({ workerId });
+        if (!profile) {
+            return NextResponse.json({ error: 'Worker not found' }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error('Error deleting worker:', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+}

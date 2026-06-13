@@ -27,12 +27,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (outboundQueue) {
-      await outboundQueue.add('sendMessage', {
-        messageId: msg._id.toString(),
-        to,
-        body,
-        platform: 'imessage'
-      });
+      await outboundQueue.add('send-sms', { messageId: msg._id.toString() });
       return NextResponse.json({ success: true, queued: true, message: msg });
     }
 

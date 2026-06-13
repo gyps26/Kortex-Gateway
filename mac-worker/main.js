@@ -68,6 +68,19 @@ ipcMain.handle('connect-hub', async (event, token) => {
             }
         };
 
+        // Handle permission errors globally
+        global.onPermissionError = () => {
+            const { dialog } = require('electron');
+            const { exec } = require('child_process');
+            dialog.showMessageBox({
+                type: 'error',
+                title: 'Full Disk Access Required',
+                message: 'This application requires Full Disk Access to read iMessages.',
+                detail: 'System Settings will now open. Please grant Full Disk Access to your Terminal or this App, and then restart the worker.'
+            });
+            exec('open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"');
+        };
+
         logToUI('Starting worker daemon...', 'info');
         
         // Start the background worker logic

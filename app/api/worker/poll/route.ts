@@ -28,23 +28,20 @@ export async function GET(req: NextRequest) {
         // Register or update heartbeat
         let profile = await Profile.findOne({ workerId });
         if (!profile) {
-            // First time seeing this worker
             profile = new Profile({ workerId, name: `Mac Worker ${workerId}`, status: 'active' });
         } else {
             profile.lastPing = new Date();
-            // Reset daily count if a new day
             const now = new Date();
-            const lastReset = profile.lastReset;
+            const lastReset = profile.lastReset || new Date(0);
             if (now.getDate() !== lastReset.getDate() || now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
                 profile.dailyCount = 0;
                 profile.lastReset = now;
             }
-        }
-
-        // If inactive (e.g. from error limit), do not return jobs
-        if (profile.status === 'inactive') {
-            await profile.save();
-            return NextResponse.json({ actions: [] });
+            // Reconnecting worker — allow recovery after transient failures
+            if (profile.status === 'inactive') {
+                profile.status = 'active';
+                profile.errorThreshold = 0;
+            }
         }
 
         await profile.save();

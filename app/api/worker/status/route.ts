@@ -3,6 +3,7 @@ import { connectToDatabase } from '../../../../lib/db/mongoose';
 import { Message } from '../../../../models/Message';
 import { Profile } from '../../../../models/Profile';
 import { GhlLocation } from '../../../../models/GhlLocation';
+import { getValidAccessToken } from '../../../../lib/ghl';
 import axios from 'axios';
 
 function checkAuth(req: NextRequest) {
@@ -42,14 +43,15 @@ export async function POST(req: NextRequest) {
         // Sync status back to GHL Custom Provider
         if (msg.ghlMessageId && msg.locationId && ['sent', 'delivered', 'failed'].includes(status)) {
             const ghlLocation = await GhlLocation.findOne({ locationId: msg.locationId });
-            if (ghlLocation && ghlLocation.accessToken) {
+            const accessToken = ghlLocation ? await getValidAccessToken(ghlLocation) : null;
+            if (accessToken) {
                 try {
                     await axios.put(`https://services.leadconnectorhq.com/conversations/messages/${msg.ghlMessageId}/status`, {
                         status: status === 'failed' ? 'undelivered' : 'delivered',
                         error: errorDetails ? { code: 400, message: errorDetails } : undefined
                     }, {
                         headers: {
-                            'Authorization': `Bearer ${ghlLocation.accessToken}`,
+                            'Authorization': `Bearer ${accessToken}`,
                             'Version': '2021-04-15',
                             'Content-Type': 'application/json'
                         }
@@ -66,13 +68,14 @@ export async function POST(req: NextRequest) {
                 // Do not increment errorThreshold for this because it's a lead issue, not a worker issue
                 // Tag the contact in GoHighLevel
                 const ghlLocation = await GhlLocation.findOne({ locationId: msg.locationId });
-                if (ghlLocation && ghlLocation.accessToken) {
+                const accessToken = ghlLocation ? await getValidAccessToken(ghlLocation) : null;
+                if (accessToken) {
                     try {
                         await axios.post(`https://services.leadconnectorhq.com/contacts/${msg.ghlContactId}/tags`, {
                             tags: ['Non-iPhone']
                         }, {
                             headers: {
-                                'Authorization': `Bearer ${ghlLocation.accessToken}`,
+                                'Authorization': `Bearer ${accessToken}`,
                                 'Version': '2021-07-28',
                                 'Content-Type': 'application/json'
                             }
