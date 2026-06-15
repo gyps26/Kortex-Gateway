@@ -8,6 +8,7 @@ export interface OutboundPayload {
   locationId: string;
   contactId?: string;
   ghlMessageId?: string;
+  userId?: string;
   attachments?: string[];
   channel?: Channel;
 }

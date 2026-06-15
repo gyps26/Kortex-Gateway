@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '../../../../../lib/db/mongoose';
 import { Profile } from '../../../../../models/Profile';
-import { publishSessionCreate, publishSessionDestroy } from '../../../../../lib/whatsapp/session-events';
+
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -25,8 +25,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       }
     );
 
-    await publishSessionDestroy({ sessionId: profile.sessionId, workerId: profile.workerId });
-    await publishSessionCreate({ sessionId: profile.sessionId, workerId: profile.workerId });
+
 
     return NextResponse.json({ success: true, workerId: id });
   } catch (error: unknown) {

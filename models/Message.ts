@@ -4,6 +4,7 @@ import type { Channel } from '../lib/connectors/types';
 export interface IMessage extends mongoose.Document {
   ghlContactId?: string;
   ghlMessageId?: string;
+  ghlUserId?: string;
   locationId?: string;
   workerId?: string;
   deviceId?: string;
@@ -21,6 +22,7 @@ export interface IMessage extends mongoose.Document {
 const messageSchema = new mongoose.Schema<IMessage>({
   ghlContactId: { type: String },
   ghlMessageId: { type: String },
+  ghlUserId: { type: String, index: true },
   locationId: { type: String, index: true },
   workerId: { type: String },
   deviceId: { type: String },

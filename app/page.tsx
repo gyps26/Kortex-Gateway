@@ -54,7 +54,7 @@ export default function Dashboard() {
           transition={{ delay: 0.1 }}
           className="text-sm text-slate-500 mt-1"
         >
-          Kortex iMessage Gateway — live system status
+          Kortex Gateway — live system status
         </motion.p>
       </div>
 

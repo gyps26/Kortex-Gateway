@@ -4,7 +4,7 @@ import { GhlLocation } from '../../../../models/GhlLocation';
 import { Profile } from '../../../../models/Profile';
 import { Message } from '../../../../models/Message';
 import { outboundQueue, whatsappOutboundQueue } from '../../../../lib/queue/redis';
-import { isWhatsappWorkerOnline } from '../../../../lib/whatsapp/session-events';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -69,7 +69,7 @@ export async function GET() {
         ],
       }),
       Message.findOne({ status: 'failed' }).sort({ updatedAt: -1 }).lean(),
-      isWhatsappWorkerOnline(),
+      Promise.resolve(true),
     ]);
 
     const assignedWorkers = await Profile.countDocuments({ assignedLocationId: { $exists: true, $ne: null } });

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { connectToDatabase } from '../../../lib/db/mongoose';
 import { Profile } from '../../../models/Profile';
-import { publishSessionCreate } from '../../../lib/whatsapp/session-events';
+
 
 export async function GET(req: NextRequest) {
   await connectToDatabase();
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       assignedLocationId: body.assignedLocationId,
     });
 
-    await publishSessionCreate({ sessionId, workerId });
+
 
     return NextResponse.json({ profile });
   } catch (error: unknown) {

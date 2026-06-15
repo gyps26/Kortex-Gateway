@@ -299,6 +299,6 @@ module.exports = { startWorker, stopWorker };
 
 if (require.main === module) {
     require('dotenv').config();
-    console.log('Starting Kortex iMessage worker CLI...');
+    console.log('Starting Kortex Gateway worker CLI...');
     startWorker();
 }

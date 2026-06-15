@@ -2,6 +2,8 @@ import { connectToDatabase } from '../db/mongoose';
 import { Message, IMessage } from '../../models/Message';
 import { Profile } from '../../models/Profile';
 import { GhlLocation } from '../../models/GhlLocation';
+import { UserMapping } from '../../models/UserMapping';
+import { sendEvolutionTextMessage } from '../whatsapp/evolution';
 import { outboundQueue } from '../queue/redis';
 import { findAvailableConnector, assignConnectorToMessage } from '../connectors/assign';
 import { Channel, CHANNEL_PRIORITY, OutboundPayload } from '../connectors/types';
@@ -50,16 +52,41 @@ async function dispatchToChannel(message: IMessage, channel: Channel): Promise<I
   }
 
   if (channel === 'WHATSAPP') {
-    message.status = 'queued';
+    message.status = 'pending';
     await message.save();
-    const { whatsappOutboundQueue } = await import('../queue/redis');
-    if (whatsappOutboundQueue) {
-      await whatsappOutboundQueue.add(
-        'dispatch-whatsapp',
-        { messageId: message._id.toString() },
-        { removeOnComplete: true, attempts: 3, backoff: { type: 'exponential', delay: 5000 } }
+
+    try {
+      let instanceName = message.locationId || 'global';
+      const apiKey = process.env.EVOLUTION_API_KEY || '';
+
+      if (message.ghlUserId) {
+        const mapping = await UserMapping.findOne({
+          ghlLocationId: message.locationId,
+          ghlUserId: message.ghlUserId,
+          channelType: 'WHATSAPP'
+        });
+        
+        if (mapping) {
+          instanceName = mapping.providerId;
+        }
+      }
+
+      await sendEvolutionTextMessage(
+        message.phone,
+        message.body,
+        instanceName,
+        apiKey
       );
+
+      message.status = 'sent';
+      await message.save();
+    } catch (error: any) {
+      console.error('Error in WHATSAPP channel dispatch:', error);
+      message.status = 'failed';
+      message.errorDetails = error.message;
+      await message.save();
     }
+
     return message;
   }
 
@@ -82,6 +109,7 @@ export async function createOutboundMessage(payload: OutboundPayload): Promise<I
   const message = await Message.create({
     ghlContactId: payload.contactId,
     ghlMessageId: payload.ghlMessageId,
+    ghlUserId: payload.userId,
     locationId: payload.locationId,
     phone: payload.phone,
     body: payload.body,

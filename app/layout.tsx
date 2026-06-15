@@ -1,7 +1,13 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/toast";
 import { Sidebar } from "@/components/sidebar";
+import { Metadata } from "next";
 import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Kortex Gateway",
+  description: "Multi-tenant, multi-channel communication hub.",
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) { 
   return ( 

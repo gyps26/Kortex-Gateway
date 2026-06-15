@@ -7,7 +7,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - MONGODB_URI=mongodb://mongodb:27017/kortex-imessage-gateway
+      - MONGODB_URI=mongodb://mongodb:27017/kortex-gateway
       - REDIS_URL=redis://redis:6379
       - API_SECRET=my_super_secret_for_mac_workers
       - APP_URL=http://localhost:3000
@@ -15,17 +15,7 @@ services:
       - mongodb
       - redis
 
-  whatsapp-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: npm run worker:whatsapp
-    environment:
-      - MONGODB_URI=mongodb://mongodb:27017/kortex-imessage-gateway
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - mongodb
-      - redis
+
 
   mongodb:
     image: mongo:latest
