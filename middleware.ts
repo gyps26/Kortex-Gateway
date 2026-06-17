@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const PROTECTED_API_PATHS = ['/api/settings/token', '/api/settings/ghl'];
+const PROTECTED_API_PATHS = ['/api/settings/token'];
 
 function checkAdminAuth(req: NextRequest): boolean {
   const adminKey = process.env.ADMIN_API_KEY;
-  if (!adminKey) return true;
+  if (!adminKey || adminKey.startsWith('your_')) return true; // skip if unset or placeholder
 
   const authHeader = req.headers.get('authorization') || '';
   const headerKey = req.headers.get('x-admin-key') || '';

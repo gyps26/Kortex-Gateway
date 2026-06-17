@@ -13,7 +13,8 @@ export async function GET() {
     // The user might need to see the Client ID they configured.
     return NextResponse.json({
       ghlClientId: settings.ghlClientId,
-      hasClientSecret: !!settings.ghlClientSecret
+      hasClientSecret: !!settings.ghlClientSecret,
+      appUrl: process.env.APP_URL || '',
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -13,7 +13,7 @@ export interface IMessage extends mongoose.Document {
   body: string;
   attachments?: string[];
   direction: 'inbound' | 'outbound';
-  status: 'pending' | 'queued' | 'sent' | 'failed' | 'delivered';
+  status: 'pending' | 'queued' | 'sent' | 'failed' | 'delivered' | 'received';
   errorDetails?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -31,7 +31,7 @@ const messageSchema = new mongoose.Schema<IMessage>({
   body: { type: String, required: true },
   attachments: [{ type: String }],
   direction: { type: String, enum: ['inbound', 'outbound'], required: true },
-  status: { type: String, enum: ['pending', 'queued', 'sent', 'failed', 'delivered'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'queued', 'sent', 'failed', 'delivered', 'received'], default: 'pending' },
   errorDetails: { type: String },
 }, { timestamps: true });
 

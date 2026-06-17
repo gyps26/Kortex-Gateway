@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       body: messageText,
       channel: 'SMS',
       direction: 'inbound',
-      status: 'delivered',
+      status: 'received',
     });
 
     try {

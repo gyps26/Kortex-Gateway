@@ -31,6 +31,7 @@ function IntegrationContent() {
       .then((res) => res.json())
       .then((data) => {
         if (data.ghlClientId) setGhlClientId(data.ghlClientId);
+        if (data.appUrl) setAppOrigin(data.appUrl);
         setSettingsLoaded(true);
       })
       .catch(() => setSettingsLoaded(true));
@@ -43,14 +44,16 @@ function IntegrationContent() {
       return;
     }
     
-    const redirectUri = `${window.location.origin}/api/oauth`;
+    const redirectUri = process.env.NEXT_PUBLIC_GHL_REDIRECT_URI || `${window.location.origin}/api/oauth/callback`;
 
     const scopes = [
-      'contacts.readonly',
-      'contacts.write',
+      'conversations.readonly',
+      'conversations.write',
       'conversations/message.readonly',
       'conversations/message.write',
+      'contacts.readonly',
       'locations.readonly',
+      'users.readonly',
     ].join(' ');
 
     const cleanClientId = ghlClientId.trim();
@@ -60,15 +63,22 @@ function IntegrationContent() {
   const saveGhlSettings = async () => {
     setIsSavingSettings(true);
     try {
-      await fetch('/api/settings/ghl', {
+      const payload: any = { ghlClientId: ghlClientId.trim() };
+      // Only send clientSecret if the user actually typed a new one
+      if (ghlClientSecret.trim()) {
+        payload.ghlClientSecret = ghlClientSecret.trim();
+      }
+      const res = await fetch('/api/settings/ghl', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          ghlClientId: ghlClientId.trim(), 
-          ghlClientSecret: ghlClientSecret.trim() 
-        })
+        body: JSON.stringify(payload)
       });
-      alert('GoHighLevel settings saved!');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(`Failed to save: ${data.error || res.statusText}`);
+      } else {
+        alert('GoHighLevel settings saved!');
+      }
     } catch (e) {
       alert('Failed to save settings.');
     }
@@ -88,7 +98,7 @@ function IntegrationContent() {
   useEffect(() => {
     fetchLocations();
     fetchSettings();
-    setAppOrigin(window.location.origin);
+    setAppOrigin(window.location.origin); // fallback, overridden by fetchSettings if APP_URL exists
   }, []);
 
   return (
@@ -125,7 +135,7 @@ function IntegrationContent() {
 
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm mb-6">
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">GoHighLevel App Configuration</h3>
-          <p className="text-sm text-slate-500 mb-4">Create a Private App in the GoHighLevel Developer Portal with the scopes: <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">contacts.readonly</code>, <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">contacts.write</code>, <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">conversations/message.readonly</code>, <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">conversations/message.write</code>, <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">locations.readonly</code>. Set the redirect URI to <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">{appOrigin}/api/oauth</code>.</p>
+          <p className="text-sm text-slate-500 mb-4">Create a Private App in the GoHighLevel Developer Portal with the scopes: <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">conversations.readonly</code>, <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">conversations.write</code>, <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">conversations/message.readonly</code>, <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">conversations/message.write</code>, <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">contacts.readonly</code>, <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">locations.readonly</code>, <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">users.readonly</code>. Set the redirect URI to <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">{appOrigin}/api/oauth/callback</code>.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Client ID</label>

@@ -186,12 +186,20 @@ export default function SubaccountsPage() {
                           </div>
                         </td>
                         <td className="py-4 px-2 text-center">
-                          <button
-                            onClick={() => openAssignModal(loc.locationId)}
-                            className="text-indigo-500 hover:text-indigo-600 text-xs font-semibold"
-                          >
-                            Manage
-                          </button>
+                          <div className="flex flex-col gap-2 items-center">
+                            <button
+                              onClick={() => openAssignModal(loc.locationId)}
+                              className="text-indigo-500 hover:text-indigo-600 text-xs font-semibold"
+                            >
+                              Manage Devices
+                            </button>
+                            <button
+                              onClick={() => router.push(`/subaccounts/${loc.locationId}/routing`)}
+                              className="text-emerald-500 hover:text-emerald-600 text-xs font-semibold"
+                            >
+                              Advanced Routing
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

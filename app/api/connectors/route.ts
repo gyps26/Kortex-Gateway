@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { connectToDatabase } from '../../../lib/db/mongoose';
 import { Profile } from '../../../models/Profile';
+import axios from 'axios';
 
 
 export async function GET(req: NextRequest) {
@@ -36,6 +37,38 @@ export async function POST(req: NextRequest) {
       status: 'inactive',
       assignedLocationId: body.assignedLocationId,
     });
+
+    const evoApiUrl = 'https://evoapi.gokortex.com';
+    const apiKey = process.env.EVOLUTION_API_KEY || '';
+    
+    try {
+      await axios.post(`${evoApiUrl}/instance/create`, {
+        instanceName: workerId,
+        qrcode: true,
+        integration: 'WHATSAPP-BAILEYS'
+      }, {
+        headers: { apikey: apiKey }
+      });
+      
+      const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || '';
+      if (appUrl) {
+        await axios.post(`${evoApiUrl}/webhook/set/${workerId}`, {
+          webhook: {
+            url: `${appUrl}/api/webhooks/whatsapp`,
+            byEvents: false,
+            base64: false,
+            events: [
+              "MESSAGES_UPSERT",
+              "CONNECTION_UPDATE"
+            ]
+          }
+        }, {
+          headers: { apikey: apiKey }
+        });
+      }
+    } catch (evoErr: any) {
+      console.error('Failed to create Evolution API instance:', evoErr.response?.data || evoErr.message);
+    }
 
 
 

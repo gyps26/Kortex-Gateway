@@ -15,6 +15,12 @@ interface QrModalProps {
 }
 
 function qrImageUrl(data: string) {
+  if (!data) return '';
+  if (data.startsWith('data:image/')) return data;
+  if (data.length > 500) {
+    if (!data.startsWith('data:')) return `data:image/png;base64,${data}`;
+    return data;
+  }
   return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data)}`;
 }
 

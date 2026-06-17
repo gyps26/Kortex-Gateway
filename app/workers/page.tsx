@@ -263,7 +263,7 @@ export default function WorkersPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const isOnline = (lastPing?: string) => lastPing ? Date.now() - new Date(lastPing).getTime() < 30_000 : false;
+  const isOnline = (lastPing?: string) => lastPing ? Date.now() - new Date(lastPing).getTime() < 120_000 : false;
 
   const tabClass = (tab: Channel) =>
     `px-6 py-2 rounded-t-xl font-medium text-sm ${
@@ -419,7 +419,7 @@ export default function WorkersPage() {
                               : 'bg-red-100 text-red-600'
                           }`}
                         >
-                          {online && worker.status === 'active' ? 'online' : worker.status}
+                          {online && worker.status === 'active' ? 'online' : (worker.status === 'active' ? 'offline' : worker.status)}
                         </span>
                       </td>
                       <td suppressHydrationWarning className="py-4 text-center text-xs font-mono">

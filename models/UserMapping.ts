@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IUserMapping extends Document {
   ghlLocationId: string;
   ghlUserId: string;
-  channelType: 'WHATSAPP' | 'SMS_GATEWAY';
+  channelType: 'WHATSAPP' | 'SMS';
   providerId: string;
   providerNumber: string;
   createdAt: Date;
@@ -14,7 +14,7 @@ const UserMappingSchema = new Schema<IUserMapping>(
   {
     ghlLocationId: { type: String, required: true, index: true },
     ghlUserId: { type: String, required: true, index: true },
-    channelType: { type: String, enum: ['WHATSAPP', 'SMS_GATEWAY'], required: true },
+    channelType: { type: String, enum: ['WHATSAPP', 'SMS'], required: true },
     providerId: { type: String, required: true },
     providerNumber: { type: String, required: true },
   },

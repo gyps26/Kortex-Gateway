@@ -35,8 +35,10 @@ export async function POST(req: NextRequest) {
     const msgBody = body.message || body.body || customData.message || customData.body;
     const locId = body.location_id || body.locationId || body.location?.id;
     const ghlMsgId = body.messageId || body.message_id || `wf_${Date.now()}`;
+    const userId = body.userId || body.user_id || customData.userId;
     const attachments = body.attachments || [];
-    const channel = (body.channel || customData.channel) as Channel | undefined;
+    const queryChannel = req.nextUrl.searchParams.get('channel');
+    const channel = (queryChannel || body.channel || customData.channel) as Channel | undefined;
 
     if (!phoneNum || !msgBody || !locId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -46,6 +48,7 @@ export async function POST(req: NextRequest) {
 
     const message = await createOutboundMessage({
       contactId,
+      userId,
       ghlMessageId: ghlMsgId,
       locationId: locId,
       phone: phoneNum,

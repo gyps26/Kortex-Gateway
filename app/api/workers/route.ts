@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '../../../lib/db/mongoose';
 import { Profile } from '../../../models/Profile';
+import axios from 'axios';
 
 
 export async function PUT(req: NextRequest) {
@@ -49,7 +50,17 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: 'Worker not found' }, { status: 404 });
         }
 
-
+        if (profile.channel === 'WHATSAPP') {
+            try {
+              const evoApiUrl = 'https://evoapi.gokortex.com';
+              const apiKey = process.env.EVOLUTION_API_KEY || '';
+              await axios.delete(`${evoApiUrl}/instance/delete/${profile.workerId}`, {
+                headers: { apikey: apiKey }
+              });
+            } catch(e:any) {
+              console.error('Failed to delete evolution instance:', e.response?.data || e.message);
+            }
+        }
 
         return NextResponse.json({ success: true });
     } catch (error: any) {

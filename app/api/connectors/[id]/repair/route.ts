@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '../../../../../lib/db/mongoose';
 import { Profile } from '../../../../../models/Profile';
+import axios from 'axios';
 
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -24,6 +25,16 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         $unset: { qrCode: 1, whatsappPhone: 1 },
       }
     );
+
+    try {
+        const evoApiUrl = 'https://evoapi.gokortex.com';
+        const apiKey = process.env.EVOLUTION_API_KEY || '';
+        await axios.delete(`${evoApiUrl}/instance/logout/${id}`, {
+            headers: { apikey: apiKey }
+        });
+    } catch(e:any) {
+        console.error('Failed to logout evolution instance:', e.response?.data || e.message);
+    }
 
 
 

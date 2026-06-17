@@ -53,3 +53,33 @@ export async function fetchLocationName(locationId: string, accessToken: string)
     return undefined;
   }
 }
+
+export async function fetchContact(contactId: string, accessToken: string): Promise<any | null> {
+  try {
+    const res = await axios.get(`https://services.leadconnectorhq.com/contacts/${contactId}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Version: '2021-07-28',
+      },
+    });
+    return res.data?.contact || null;
+  } catch (error: any) {
+    console.error('Failed to fetch GHL contact:', error.response?.data || error.message);
+    return null;
+  }
+}
+
+export async function fetchUsers(locationId: string, accessToken: string): Promise<any[]> {
+  try {
+    const res = await axios.get(`https://services.leadconnectorhq.com/users/search?locationId=${locationId}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Version: '2021-07-28',
+      },
+    });
+    return res.data?.users || [];
+  } catch (error: any) {
+    console.error('Failed to fetch GHL users:', error.response?.data || error.message);
+    return [];
+  }
+}

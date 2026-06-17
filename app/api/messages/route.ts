@@ -3,6 +3,8 @@ import { connectToDatabase } from '../../../lib/db/mongoose';
 import { Message } from '../../../models/Message';
 import { createOutboundMessage } from '../../../lib/routing/channelRouter';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   await connectToDatabase();
   try {

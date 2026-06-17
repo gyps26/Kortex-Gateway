@@ -7,6 +7,8 @@ export interface IGhlLocation extends mongoose.Document {
   expiresAt: Date;
   companyName?: string;
   defaultChannel?: 'IMESSAGE' | 'WHATSAPP' | 'SMS';
+  defaultSmsWorkerId?: string;
+  defaultWhatsappWorkerId?: string;
   updatedAt: Date;
 }
 
@@ -17,6 +19,8 @@ const ghlLocationSchema = new mongoose.Schema<IGhlLocation>({
   expiresAt: { type: Date, required: true },
   companyName: { type: String },
   defaultChannel: { type: String, enum: ['IMESSAGE', 'WHATSAPP', 'SMS'] },
+  defaultSmsWorkerId: { type: String },
+  defaultWhatsappWorkerId: { type: String },
   updatedAt: { type: Date, default: Date.now }
 });
 

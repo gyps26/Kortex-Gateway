@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { PageHeader } from '../../components/page-header';
 
-const STATUS_OPTIONS = ['All Statuses', 'pending', 'queued', 'sent', 'delivered', 'failed'];
+const STATUS_OPTIONS = ['All Statuses', 'pending', 'queued', 'sent', 'delivered', 'failed', 'received'];
 const DIRECTION_OPTIONS = ['All', 'inbound', 'outbound'];
 
 export default function MessagesPage() {
@@ -51,14 +51,16 @@ export default function MessagesPage() {
     switch (status) {
       case 'sent':
       case 'delivered':
-        return 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20';
+        return 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400';
       case 'failed':
-        return 'text-red-600 bg-red-50 dark:bg-red-900/20';
+        return 'text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400';
       case 'queued':
       case 'pending':
-        return 'text-amber-600 bg-amber-50 dark:bg-amber-900/20';
+        return 'text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400';
+      case 'received':
+        return 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400';
       default:
-        return 'text-slate-600 bg-slate-50 dark:bg-slate-800';
+        return 'text-slate-600 bg-slate-50 dark:bg-slate-800 dark:text-slate-400';
     }
   };
 
@@ -165,9 +167,9 @@ export default function MessagesPage() {
                         {m.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 capitalize">{m.direction}</td>
-                    <td className="px-6 py-4 font-mono text-xs">{m.locationId || '—'}</td>
-                    <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
+                    <td className="px-6 py-4 capitalize text-slate-800 dark:text-slate-200">{m.direction}</td>
+                    <td className="px-6 py-4 font-mono text-xs text-slate-800 dark:text-slate-400">{m.locationId || '—'}</td>
+                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
                       {new Date(m.createdAt).toLocaleDateString()}{' '}
                       {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </td>
