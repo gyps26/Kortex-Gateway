@@ -24,6 +24,7 @@ interface Connector {
   deviceBrand?: string;
   deviceModel?: string;
   qrCode?: string;
+  pairingCode?: string;
   fcmToken?: string;
 }
 
@@ -36,8 +37,9 @@ export default function WorkersPage() {
   const [installerUrl, setInstallerUrl] = useState('/api/installer');
   const [copied, setCopied] = useState(false);
 
-  const [qrModal, setQrModal] = useState<{ workerId: string; qr: string; error?: string | null } | null>(null);
+  const [qrModal, setQrModal] = useState<{ workerId: string; qr: string; pairingCode?: string; phoneNumber?: string; error?: string | null } | null>(null);
   const [deviceSetupKey, setDeviceSetupKey] = useState<string | null>(null);
+  const [apiBaseUrl, setApiBaseUrl] = useState('');
 
   const [editLimit, setEditLimit] = useState<{ workerId: string; name: string; limit: number } | null>(null);
   const [removeTarget, setRemoveTarget] = useState<{ workerId: string; name: string } | null>(null);
@@ -94,6 +96,13 @@ export default function WorkersPage() {
       })
       .catch(() => {});
 
+    fetch('/api/gateway/config')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.apiBaseUrl) setApiBaseUrl(data.apiBaseUrl);
+      })
+      .catch(() => {});
+
     return () => clearInterval(interval);
   }, [loadConnectors]);
 
@@ -113,14 +122,20 @@ export default function WorkersPage() {
 
     const poll = async () => {
       try {
-        const res = await fetch(`/api/connectors/${qrModal.workerId}/qr`);
+        const url = qrModal.phoneNumber
+          ? `/api/connectors/${qrModal.workerId}/qr?number=${encodeURIComponent(qrModal.phoneNumber)}`
+          : `/api/connectors/${qrModal.workerId}/qr`;
+        const res = await fetch(url);
         if (!res.ok) {
           setQrModal((prev) => prev ? { ...prev, error: 'Could not fetch QR status' } : null);
           return;
         }
         const data = await res.json();
         if (data.qrCode && data.qrCode !== qrModal.qr) {
-          setQrModal({ workerId: qrModal.workerId, qr: data.qrCode, error: null });
+          setQrModal((prev) => prev ? { ...prev, qr: data.qrCode, error: null } : null);
+        }
+        if (data.pairingCode && data.pairingCode !== qrModal.pairingCode) {
+          setQrModal((prev) => prev ? { ...prev, pairingCode: data.pairingCode, error: null } : null);
         }
         if (data.status === 'active') {
           setQrModal(null);
@@ -179,13 +194,13 @@ export default function WorkersPage() {
     }
   };
 
-  const handleCreateWhatsApp = async (name: string) => {
+  const handleCreateWhatsApp = async (name: string, proxy?: string) => {
     setLoadingAction('create-whatsapp');
     try {
       const res = await fetch('/api/connectors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, proxy }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create connector');
@@ -236,6 +251,20 @@ export default function WorkersPage() {
       loadConnectors();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to generate setup QR', 'error');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleSyncWhatsAppWebhook = async (workerId: string) => {
+    setLoadingAction(`sync-${workerId}`);
+    try {
+      const res = await fetch(`/api/connectors/${workerId}/sync-webhook`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to sync inbound webhook');
+      showToast(`Inbound webhook synced${data.webhookUrl ? `: ${data.webhookUrl}` : ''}`, 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to sync inbound webhook', 'error');
     } finally {
       setLoadingAction(null);
     }
@@ -427,10 +456,20 @@ export default function WorkersPage() {
                       </td>
                       <td className="py-4 text-right">
                         <div className="flex gap-2 justify-end flex-wrap">
+                          {activeTab === 'WHATSAPP' && worker.status === 'active' && (
+                            <button
+                              type="button"
+                              onClick={() => handleSyncWhatsAppWebhook(worker.workerId)}
+                              disabled={actionLoading('sync')}
+                              className="border border-blue-200 text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-xs font-semibold disabled:opacity-50"
+                            >
+                              {actionLoading('sync') ? '...' : 'Sync Inbound'}
+                            </button>
+                          )}
                           {activeTab === 'WHATSAPP' && worker.status !== 'active' && (
                             <button
                               type="button"
-                              onClick={() => setQrModal({ workerId: worker.workerId, qr: worker.qrCode || QR_PLACEHOLDER })}
+                              onClick={() => setQrModal({ workerId: worker.workerId, qr: worker.qrCode || QR_PLACEHOLDER, pairingCode: worker.pairingCode })}
                               className="border border-green-200 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 px-3 py-1 rounded text-xs font-semibold"
                             >
                               Show QR
@@ -488,14 +527,17 @@ export default function WorkersPage() {
         title="Scan QR with WhatsApp"
         subtitle={qrModal?.workerId}
         qrData={qrModal?.qr || QR_PLACEHOLDER}
+        pairingCode={qrModal?.pairingCode}
         error={qrModal?.error}
         workerOffline={whatsappWorkerOnline === false}
         onClose={() => setQrModal(null)}
+        onRequestPairingCode={(number) => setQrModal((prev) => prev ? { ...prev, phoneNumber: number } : null)}
       />
 
       <DeviceSetupModal
         open={!!deviceSetupKey && activeTab === 'SMS'}
         apiKey={deviceSetupKey || ''}
+        apiBaseUrl={apiBaseUrl}
         onClose={() => setDeviceSetupKey(null)}
       />
 

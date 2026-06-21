@@ -3,7 +3,7 @@ import { connectToDatabase } from '../../../../lib/db/mongoose';
 import { GhlLocation } from '../../../../models/GhlLocation';
 import { Profile } from '../../../../models/Profile';
 import { Message } from '../../../../models/Message';
-import { outboundQueue, whatsappOutboundQueue } from '../../../../lib/queue/redis';
+import { getRedisConnection } from '../../../../lib/queue/redis';
 
 
 export const dynamic = 'force-dynamic';
@@ -37,7 +37,6 @@ export async function GET() {
       failedByChannel,
       connectorsNeedingAttention,
       lastFailedMessage,
-      whatsappWorkerOnline,
     ] = await Promise.all([
       GhlLocation.countDocuments(),
       Profile.countDocuments({ status: 'active' }),
@@ -69,7 +68,6 @@ export async function GET() {
         ],
       }),
       Message.findOne({ status: 'failed' }).sort({ updatedAt: -1 }).lean(),
-      Promise.resolve(true),
     ]);
 
     const assignedWorkers = await Profile.countDocuments({ assignedLocationId: { $exists: true, $ne: null } });
@@ -84,6 +82,9 @@ export async function GET() {
       channelFailed[row._id || 'UNKNOWN'] = row.count;
     }
 
+    const redisConn = getRedisConnection();
+    const redisReachable = redisConn ? await redisConn.ping().then(() => true).catch(() => false) : false;
+
     return NextResponse.json({
       connectedSubaccounts,
       activeWorkers,
@@ -92,9 +93,7 @@ export async function GET() {
       messagesSentToday,
       pendingMessages,
       failedMessages,
-      redisConnected: !!outboundQueue,
-      whatsappQueueConnected: !!whatsappOutboundQueue,
-      whatsappWorkerOnline,
+      redisReachable,
       firebaseConfigured: isFirebaseConfigured(),
       connectorsNeedingAttention,
       lastFailedReason: lastFailedMessage?.errorDetails || null,
@@ -118,9 +117,7 @@ export async function GET() {
         messagesSentToday: 0,
         pendingMessages: 0,
         failedMessages: 0,
-        redisConnected: false,
-        whatsappQueueConnected: false,
-        whatsappWorkerOnline: false,
+        redisReachable: false,
         firebaseConfigured: false,
         connectorsNeedingAttention: 0,
         lastFailedReason: null,

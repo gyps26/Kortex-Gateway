@@ -11,7 +11,10 @@ export interface IProfile extends mongoose.Document {
   sessionId?: string;
   apiKey?: string;
   qrCode?: string;
+  pairingCode?: string;
   whatsappPhone?: string;
+  instanceName?: string;
+  proxy?: string;
   deviceBrand?: string;
   deviceModel?: string;
   status: 'active' | 'inactive' | 'pending';
@@ -32,7 +35,10 @@ const profileSchema = new mongoose.Schema<IProfile>({
   sessionId: { type: String },
   apiKey: { type: String, index: true },
   qrCode: { type: String },
+  pairingCode: { type: String },
   whatsappPhone: { type: String },
+  instanceName: { type: String, index: true },
+  proxy: { type: String },
   deviceBrand: { type: String },
   deviceModel: { type: String },
   status: { type: String, enum: ['active', 'inactive', 'pending'], default: 'active' },

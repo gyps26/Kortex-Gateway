@@ -62,8 +62,8 @@ export async function POST(req: NextRequest) {
         locationId: profile.assignedLocationId,
         phone,
         message: smsBody,
-        conversationProviderId: profile.assignedLocationId,
         direction: isFromMe ? 'outbound' : undefined,
+        channel: 'IMESSAGE',
       });
     } catch (ghlErr: unknown) {
       const err = ghlErr as { response?: { data?: unknown }; message?: string };

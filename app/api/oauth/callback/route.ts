@@ -4,7 +4,7 @@ import { GhlAuth } from '../../../../models/GhlAuth';
 import { GhlLocation } from '../../../../models/GhlLocation';
 import { exchangeToken } from '../../../../lib/ghl/oauth';
 import { GlobalSettings } from '../../../../models/GlobalSettings';
-import { fetchLocationName } from '../../../../lib/ghl';
+import { fetchLocationDetails } from '../../../../lib/ghl';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -68,9 +68,9 @@ export async function GET(req: NextRequest) {
     );
 
     // Also save to GhlLocation (used by Subaccounts page, routing engine, etc.)
-    let companyName: string | undefined;
+    let locationDetails: { name?: string; companyId?: string } = {};
     try {
-      companyName = await fetchLocationName(locationId, access_token);
+      locationDetails = await fetchLocationDetails(locationId, access_token);
     } catch { /* ignore */ }
 
     await GhlLocation.findOneAndUpdate(
@@ -80,7 +80,8 @@ export async function GET(req: NextRequest) {
         accessToken: access_token,
         refreshToken: refresh_token,
         expiresAt,
-        companyName: companyName || undefined,
+        companyName: locationDetails.name || undefined,
+        companyId: locationDetails.companyId || undefined,
         updatedAt: new Date(),
       },
       { upsert: true, new: true }

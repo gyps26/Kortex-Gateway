@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 
 const QR_PLACEHOLDER = 'Waiting for QR...';
 
@@ -8,10 +8,12 @@ interface QrModalProps {
   open: boolean;
   title: string;
   qrData: string;
+  pairingCode?: string;
   subtitle?: string;
   error?: string | null;
   workerOffline?: boolean;
   onClose: () => void;
+  onRequestPairingCode?: (number: string) => void;
 }
 
 function qrImageUrl(data: string) {
@@ -28,14 +30,25 @@ export function QrModal({
   open,
   title,
   qrData,
+  pairingCode,
   subtitle,
   error,
   workerOffline,
   onClose,
+  onRequestPairingCode,
 }: QrModalProps) {
   if (!open) return null;
 
   const hasQr = qrData && qrData !== QR_PLACEHOLDER;
+  const [showPairing, setShowPairing] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+
+  const handlePairingRequest = () => {
+    if (phoneNumber.trim() && onRequestPairingCode) {
+      onRequestPairingCode(phoneNumber.trim());
+      setShowPairing(true);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
@@ -68,7 +81,14 @@ export function QrModal({
         )}
 
         <div className="flex flex-col items-center gap-4">
-          {hasQr ? (
+          {showPairing && pairingCode ? (
+            <div className="w-[250px] h-[250px] rounded-lg bg-slate-100 dark:bg-slate-800 flex flex-col items-center justify-center gap-3 p-4">
+              <div className="text-4xl font-mono text-indigo-600 tracking-widest bg-white dark:bg-slate-900 px-4 py-2 rounded-lg shadow">
+                {pairingCode}
+              </div>
+              <p className="text-xs text-slate-500 text-center">Enter this code in WhatsApp → Linked Devices → Link with phone number</p>
+            </div>
+          ) : hasQr ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -85,6 +105,33 @@ export function QrModal({
             </div>
           )}
         </div>
+
+        {!showPairing && !pairingCode && (
+          <div className="mt-4 w-full p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">No camera? Link with phone number instead</p>
+            <div className="flex gap-2">
+              <input
+                type="tel"
+                placeholder="Phone number (e.g. +15551234567)"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className="flex-1 px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={handlePairingRequest}
+                disabled={!phoneNumber.trim()}
+                className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Get Code
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showPairing && !pairingCode && (
+          <p className="text-xs text-slate-500 text-center">Requesting pairing code...</p>
+        )}
 
         <button
           type="button"

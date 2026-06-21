@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const PROTECTED_API_PATHS = ['/api/settings/token'];
 
+function rewriteGatewayCompatPath(pathname: string): string | null {
+  if (pathname.startsWith('/api/gateway/gateway/')) {
+    return pathname.replace('/api/gateway/gateway/', '/api/gateway/');
+  }
+  return null;
+}
+
 function checkAdminAuth(req: NextRequest): boolean {
   const adminKey = process.env.ADMIN_API_KEY;
   if (!adminKey || adminKey.startsWith('your_')) return true; // skip if unset or placeholder
@@ -16,6 +23,13 @@ function checkAdminAuth(req: NextRequest): boolean {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  const rewritten = rewriteGatewayCompatPath(pathname);
+  if (rewritten) {
+    const url = req.nextUrl.clone();
+    url.pathname = rewritten;
+    return NextResponse.rewrite(url);
+  }
+
   if (PROTECTED_API_PATHS.some((path) => pathname.startsWith(path))) {
     if (!checkAdminAuth(req)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -26,5 +40,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/settings/:path*'],
+  matcher: ['/api/settings/:path*', '/api/gateway/gateway/:path*'],
 };

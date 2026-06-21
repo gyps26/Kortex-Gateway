@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     const msgBody = body.body || body.message;
     const locationId = body.locationId || body.location_id || req.headers.get('x-ghl-location-id');
     const contactId = body.contactId || body.contact_id;
+    const userId = body.userId || body.user_id || body.assignedTo;
     const ghlMessageId = body.messageId || body.message_id;
     const channel = body.channel as Channel | undefined;
 
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
       body: msgBody,
       locationId,
       contactId,
+      userId,
       ghlMessageId,
       attachments: body.attachments || [],
       channel,

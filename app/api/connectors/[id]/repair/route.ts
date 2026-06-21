@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { connectToDatabase } from '../../../../../lib/db/mongoose';
 import { Profile } from '../../../../../models/Profile';
 import axios from 'axios';
+import { registerEvolutionWebhook } from '../../../../../lib/whatsapp/webhook';
 
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -26,17 +27,19 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       }
     );
 
+    const instanceName = profile.instanceName || profile.workerId;
+
     try {
         const evoApiUrl = 'https://evoapi.gokortex.com';
         const apiKey = process.env.EVOLUTION_API_KEY || '';
-        await axios.delete(`${evoApiUrl}/instance/logout/${id}`, {
+        await axios.delete(`${evoApiUrl}/instance/logout/${instanceName}`, {
             headers: { apikey: apiKey }
         });
     } catch(e:any) {
-        console.error('Failed to logout evolution instance:', e.response?.data || e.message);
+      console.error('Failed to logout evolution instance:', e.response?.data || e.message);
     }
 
-
+    await registerEvolutionWebhook(instanceName);
 
     return NextResponse.json({ success: true, workerId: id });
   } catch (error: unknown) {

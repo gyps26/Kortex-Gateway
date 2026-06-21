@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '../../../../lib/db/mongoose';
 import { getRedisConnection } from '../../../../lib/queue/redis';
+import axios from 'axios';
 
 
 export async function GET() {
@@ -8,15 +9,21 @@ export async function GET() {
     await connectToDatabase();
     const redis = getRedisConnection();
     const redisReachable = redis ? await redis.ping().then(() => true).catch(() => false) : false;
-    const workerOnline = true;
+
+    let evoReachable = false;
+    try {
+      const res = await axios.get('https://evoapi.gokortex.com/', { timeout: 3000 });
+      evoReachable = res.status === 200;
+    } catch {}
 
     return NextResponse.json({
       redisReachable,
-      workerOnline,
-      healthy: redisReachable && workerOnline,
+      evoReachable,
+      workerOnline: evoReachable,
+      healthy: redisReachable && evoReachable,
     });
   } catch (error: unknown) {
-    console.error('WhatsApp health check error:', error);
-    return NextResponse.json({ redisReachable: false, workerOnline: false, healthy: false }, { status: 500 });
+    console.error('Health check error:', error);
+    return NextResponse.json({ redisReachable: false, evoReachable: false, workerOnline: false, healthy: false }, { status: 500 });
   }
 }

@@ -5,6 +5,7 @@ import { PageHeader } from '../../components/page-header';
 
 const STATUS_OPTIONS = ['All Statuses', 'pending', 'queued', 'sent', 'delivered', 'failed', 'received'];
 const DIRECTION_OPTIONS = ['All', 'inbound', 'outbound'];
+const CHANNEL_OPTIONS = ['All Channels', 'IMESSAGE', 'WHATSAPP', 'SMS'];
 
 export default function MessagesPage() {
   const [messages, setMessages] = useState<any[]>([]);
@@ -14,6 +15,7 @@ export default function MessagesPage() {
   const [directionFilter, setDirectionFilter] = useState('All');
   const [phoneFilter, setPhoneFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('All Subaccounts');
+  const [channelFilter, setChannelFilter] = useState('All Channels');
 
   const fetchMessages = async () => {
     try {
@@ -43,9 +45,10 @@ export default function MessagesPage() {
       if (directionFilter !== 'All' && m.direction !== directionFilter) return false;
       if (phoneFilter && !m.phone?.includes(phoneFilter)) return false;
       if (locationFilter !== 'All Subaccounts' && m.locationId !== locationFilter) return false;
+      if (channelFilter !== 'All Channels' && m.channel !== channelFilter) return false;
       return true;
     });
-  }, [messages, search, statusFilter, directionFilter, phoneFilter, locationFilter]);
+  }, [messages, search, statusFilter, directionFilter, phoneFilter, locationFilter, channelFilter]);
 
   const statusColor = (status: string) => {
     switch (status) {
@@ -126,6 +129,18 @@ export default function MessagesPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
             <div>
+              <p className="text-xs font-semibold text-slate-500 mb-2">Channel</p>
+              <select
+                value={channelFilter}
+                onChange={(e) => setChannelFilter(e.target.value)}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+              >
+                {CHANNEL_OPTIONS.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <p className="text-xs font-semibold text-slate-500 mb-2">Mobile Number</p>
               <input
                 type="text"
@@ -144,6 +159,7 @@ export default function MessagesPage() {
               <tr>
                 <th className="px-6 py-4">Recipient</th>
                 <th className="px-6 py-4">Message</th>
+                <th className="px-6 py-4">Channel</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Direction</th>
                 <th className="px-6 py-4">Location</th>
@@ -153,7 +169,7 @@ export default function MessagesPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
                     No messages found.
                   </td>
                 </tr>
@@ -162,6 +178,11 @@ export default function MessagesPage() {
                   <tr key={m._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200">{m.phone}</td>
                     <td className="px-6 py-4 text-slate-600 dark:text-slate-400 truncate max-w-sm">{m.body}</td>
+                    <td className="px-6 py-4">
+                      <span className="px-2 py-1 rounded text-xs font-semibold uppercase text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 dark:text-indigo-400">
+                        {m.channel || '—'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded text-xs font-semibold uppercase ${statusColor(m.status)}`}>
                         {m.status}

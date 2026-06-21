@@ -19,7 +19,6 @@ export async function findAvailableConnector(
   channel: Channel
 ): Promise<IProfile | null> {
   const activeProfiles = await Profile.find({
-    status: 'active',
     channel,
     assignedLocationId: locationId,
   }).sort({ lastPing: -1 });

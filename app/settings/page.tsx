@@ -11,7 +11,8 @@ function SettingsContent() {
   const [stats, setStats] = useState<{ redisConnected: boolean; mongoConnected: boolean } | null>(null);
   const [copied, setCopied] = useState('');
 
-  const appOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const [appOrigin, setAppOrigin] = useState('');
+  useEffect(() => { setAppOrigin(window.location.origin); }, []);
   const oauthSuccess = searchParams.get('success') === 'true';
 
   useEffect(() => {

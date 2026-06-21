@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing OAuth configuration' }, { status: 500 });
   }
 
-  const scopes = 'conversations.readonly conversations.write conversations/message.readonly conversations/message.write contacts.readonly locations.readonly users.readonly';
+  const scopes = 'conversations.readonly conversations.write conversations/message.readonly conversations/message.write contacts.readonly contacts.write locations.readonly users.readonly';
   
   const url = new URL(GHL_OAUTH_URL);
   url.searchParams.append('response_type', 'code');

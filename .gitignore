@@ -1,7 +1,10 @@
 node_modules/
 .next/
+.next.broken/
 coverage/
 .DS_Store
+._*
+.fuse_hidden*
 *.log
 .env*
 !.env.example

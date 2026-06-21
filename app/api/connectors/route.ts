@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { connectToDatabase } from '../../../lib/db/mongoose';
 import { Profile } from '../../../models/Profile';
 import axios from 'axios';
+import { registerEvolutionWebhook } from '../../../lib/whatsapp/webhook';
 
 
 export async function GET(req: NextRequest) {
@@ -14,6 +15,21 @@ export async function GET(req: NextRequest) {
 
   const profiles = await Profile.find(filter).sort({ lastPing: -1 }).lean();
   return NextResponse.json({ profiles });
+}
+
+function parseProxyUrl(proxyUrl: string): { host: string; port: string; protocol: string; username?: string; password?: string } | null {
+  try {
+    const url = new URL(proxyUrl);
+    return {
+      host: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? '443' : '80'),
+      protocol: url.protocol.replace(':', ''),
+      username: url.username || undefined,
+      password: url.password || undefined,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -28,6 +44,9 @@ export async function POST(req: NextRequest) {
 
     const sessionId = body.sessionId || crypto.randomUUID();
     const workerId = `wa-${sessionId.slice(0, 8)}`;
+    const instanceName = body.instanceName || body.name || workerId;
+    const proxyUrl = body.proxy;
+    const proxy = proxyUrl ? parseProxyUrl(proxyUrl) : undefined;
 
     const profile = await Profile.create({
       workerId,
@@ -36,41 +55,30 @@ export async function POST(req: NextRequest) {
       channel: 'WHATSAPP',
       status: 'inactive',
       assignedLocationId: body.assignedLocationId,
+      instanceName,
+      proxy: proxyUrl,
     });
 
     const evoApiUrl = 'https://evoapi.gokortex.com';
     const apiKey = process.env.EVOLUTION_API_KEY || '';
     
     try {
-      await axios.post(`${evoApiUrl}/instance/create`, {
-        instanceName: workerId,
+      const createPayload: any = {
+        instanceName,
         qrcode: true,
         integration: 'WHATSAPP-BAILEYS'
-      }, {
+      };
+      if (proxy) {
+        createPayload.proxy = proxy;
+      }
+      await axios.post(`${evoApiUrl}/instance/create`, createPayload, {
         headers: { apikey: apiKey }
       });
-      
-      const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || '';
-      if (appUrl) {
-        await axios.post(`${evoApiUrl}/webhook/set/${workerId}`, {
-          webhook: {
-            url: `${appUrl}/api/webhooks/whatsapp`,
-            byEvents: false,
-            base64: false,
-            events: [
-              "MESSAGES_UPSERT",
-              "CONNECTION_UPDATE"
-            ]
-          }
-        }, {
-          headers: { apikey: apiKey }
-        });
-      }
     } catch (evoErr: any) {
       console.error('Failed to create Evolution API instance:', evoErr.response?.data || evoErr.message);
     }
 
-
+    await registerEvolutionWebhook(instanceName);
 
     return NextResponse.json({ profile });
   } catch (error: unknown) {

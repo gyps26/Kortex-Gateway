@@ -4,6 +4,13 @@ import { connectToDatabase } from '../../../../lib/db/mongoose';
 import { Profile } from '../../../../models/Profile';
 import { generateDeviceApiKey } from '../../../../lib/sms/fcm';
 
+function getGatewayBaseUrl(req?: NextRequest): string {
+  const envUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL;
+  if (envUrl) return `${envUrl.replace(/\/$/, '')}/api/gateway`;
+  if (req) return `${req.nextUrl.origin}/api/gateway`;
+  return '/api/gateway';
+}
+
 export async function POST(req: NextRequest) {
   try {
     await connectToDatabase();
@@ -14,6 +21,9 @@ export async function POST(req: NextRequest) {
     if (providedApiKey) {
       const profile = await Profile.findOne({ apiKey: providedApiKey, channel: 'SMS' });
       if (!profile) {
+        // #region agent log
+        fetch('http://127.0.0.1:7513/ingest/e7352cea-e8ee-4a27-86d3-e498af1e1b06',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'dbf533'},body:JSON.stringify({sessionId:'dbf533',location:'gateway/devices:POST',message:'android link rejected invalid key',data:{hasFcmToken:!!body.fcmToken},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         return NextResponse.json({ error: 'Invalid API Key' }, { status: 404 });
       }
 
@@ -23,10 +33,15 @@ export async function POST(req: NextRequest) {
         profile.status = 'active';
       }
       if (body.brand) profile.deviceBrand = body.brand;
+      if (body.manufacturer) profile.deviceBrand = body.manufacturer;
       if (body.model) profile.deviceModel = body.model;
       if (body.enabled !== undefined) profile.status = body.enabled ? 'active' : 'inactive';
       profile.lastPing = new Date();
       await profile.save();
+
+      // #region agent log
+      fetch('http://127.0.0.1:7513/ingest/e7352cea-e8ee-4a27-86d3-e498af1e1b06',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'dbf533'},body:JSON.stringify({sessionId:'dbf533',location:'gateway/devices:POST',message:'android device linked',data:{workerId:profile.workerId,status:profile.status,hasFcmToken:!!profile.fcmToken,assignedLocationId:!!profile.assignedLocationId},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
 
       // Return selfhostsim compatible response
       return NextResponse.json({
@@ -41,6 +56,7 @@ export async function POST(req: NextRequest) {
     // Otherwise, Web Dashboard is generating a new device
     const deviceId = crypto.randomUUID();
     const apiKey = generateDeviceApiKey();
+    const gatewayUrl = getGatewayBaseUrl(req);
 
     const profile = await Profile.create({
       workerId: deviceId,
@@ -56,6 +72,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       id: profile.workerId,
       apiKey,
+      gatewayUrl,
       enabled: profile.status === 'active',
     });
   } catch (error: unknown) {

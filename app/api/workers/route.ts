@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '../../../lib/db/mongoose';
 import { Profile } from '../../../models/Profile';
+import { GhlLocation } from '../../../models/GhlLocation';
 import axios from 'axios';
 
 
@@ -20,8 +21,14 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: 'Worker not found' }, { status: 404 });
         }
 
+        if (assignedLocationId !== undefined) {
+          const location = await GhlLocation.findOne({ locationId: assignedLocationId });
+          if (!location) {
+            return NextResponse.json({ error: 'Location not found. Complete GHL OAuth for this location first.' }, { status: 400 });
+          }
+          profile.assignedLocationId = assignedLocationId;
+        }
         if (dailyLimit !== undefined) profile.dailyLimit = dailyLimit;
-        if (assignedLocationId !== undefined) profile.assignedLocationId = assignedLocationId;
         if (name !== undefined) profile.name = name;
         if (body.channel !== undefined) profile.channel = body.channel;
 

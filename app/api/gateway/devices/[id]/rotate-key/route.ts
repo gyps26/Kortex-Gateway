@@ -20,9 +20,14 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     profile.lastPing = new Date();
     await profile.save();
 
-    return NextResponse.json({ apiKey, workerId: profile.workerId });
+    return NextResponse.json({ apiKey, workerId: profile.workerId, gatewayUrl: getGatewayUrl() });
   } catch (error: unknown) {
     console.error('Rotate key error:', error);
     return NextResponse.json({ error: 'Failed to rotate API key' }, { status: 500 });
   }
+}
+
+function getGatewayUrl(): string {
+  const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL;
+  return appUrl ? `${appUrl.replace(/\/$/, '')}/api/gateway` : '';
 }

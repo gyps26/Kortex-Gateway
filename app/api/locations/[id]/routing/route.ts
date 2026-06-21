@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '../../../../../lib/db/mongoose';
 import { GhlLocation } from '../../../../../models/GhlLocation';
+import { Profile } from '../../../../../models/Profile';
 import { UserMapping } from '../../../../../models/UserMapping';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -44,19 +45,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await location.save();
 
     if (body.mappings && Array.isArray(body.mappings)) {
-      // Clear existing mappings for this location to do a clean overwrite
-      await UserMapping.deleteMany({ ghlLocationId: id });
-      
-      const newMappings = body.mappings.filter((m: any) => m.providerId).map((m: any) => ({
-        ghlLocationId: id,
-        ghlUserId: m.ghlUserId,
-        channelType: m.channelType,
-        providerId: m.providerId,
-        providerNumber: m.providerNumber || m.providerId, // Fallback if number isn't explicitly passed
-      }));
+      // Validate each mapping references a real device assigned to this location
+      const validMappings: any[] = [];
+      for (const m of body.mappings) {
+        if (!m.providerId) continue;
+        const device = await Profile.findOne({ workerId: m.providerId, assignedLocationId: id });
+        if (!device) {
+          console.warn(`[ROUTING] Skipping mapping for user ${m.ghlUserId} — device ${m.providerId} not found or not assigned to location ${id}`);
+          continue;
+        }
+        validMappings.push({
+          ghlLocationId: id,
+          ghlUserId: m.ghlUserId,
+          channelType: m.channelType,
+          providerId: m.providerId,
+          providerNumber: m.providerNumber || device.name || m.providerId,
+        });
+      }
 
-      if (newMappings.length > 0) {
-        await UserMapping.insertMany(newMappings);
+      // Clear existing mappings and insert valid ones
+      await UserMapping.deleteMany({ ghlLocationId: id });
+
+      if (validMappings.length > 0) {
+        await UserMapping.insertMany(validMappings);
       }
     }
 

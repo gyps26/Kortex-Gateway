@@ -1,9 +1,9 @@
-import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
+import { Queue } from 'bullmq';
 import { connectToDatabase } from '../db/mongoose';
 import { Message } from '../../models/Message';
 import { Profile } from '../../models/Profile';
-import { processOutboundJob, OUTBOUND_JOB_NAME } from '../routing/channelRouter';
+import { processOutboundJob } from '../routing/channelRouter';
 
 const REDIS_URL = process.env.REDIS_URL;
 
@@ -26,68 +26,64 @@ if (REDIS_URL) {
   }
 }
 
-export const outboundQueue = connection ? new Queue('outboundMessages', { connection: connection as any }) : null;
-export const whatsappOutboundQueue = connection
-  ? new Queue('whatsappOutbound', { connection: connection as any })
-  : null;
-
-export const setupWorker = () => {
-  if (!connection) return null;
-
-  setInterval(async () => {
+export const registerStaleChecker = () => {
+  const interval = setInterval(async () => {
     try {
       await connectToDatabase();
-      const threshold = new Date(Date.now() - 15000);
-      const staleProfiles = await Profile.find({
+
+      // Log devices with stale pings but do NOT change their status.
+      // Device liveness is determined at message-send time: if dispatch fails, the
+      // message is marked 'failed' and the error details indicate why.
+      const staleThreshold = new Date(Date.now() - 300000);
+      const staleDevices = await Profile.find({
         status: 'active',
-        channel: 'IMESSAGE',
-        lastPing: { $lt: threshold },
+        lastPing: { $lt: staleThreshold },
+        channel: { $in: ['WHATSAPP', 'SMS'] },
       });
 
-      for (const profile of staleProfiles) {
-        profile.status = 'inactive';
-        await profile.save();
-        console.log(`Profile ${profile.workerId} marked offline due to inactivity.`);
+      for (const profile of staleDevices) {
+        const minutesAgo = ((Date.now() - new Date(profile.lastPing).getTime()) / 60000).toFixed(0);
+        console.warn(`[STALE] ${profile.channel} profile ${profile.workerId} has not pinged in ${minutesAgo}min (status kept as active).`);
+      }
 
-        const messagesToRequeue = await Message.find({ workerId: profile.workerId, status: 'queued' });
-        for (const m of messagesToRequeue) {
-          m.status = 'pending';
-          m.workerId = undefined;
-          m.deviceId = undefined;
-          await m.save();
-          if (outboundQueue) {
-            await outboundQueue.add(OUTBOUND_JOB_NAME, { messageId: m._id.toString() });
-          }
-        }
+      // Recover stuck pending messages (>5 minutes old) — safety net in case
+      // a dispatch error left the message in pending state.
+      const stuckThreshold = new Date(Date.now() - 300000);
+      const stuckMessages = await Message.find({
+        status: 'pending',
+        createdAt: { $lt: stuckThreshold },
+      });
+
+      for (const msg of stuckMessages) {
+        console.warn(`[STALE] Re-dispatching stuck pending message ${msg._id} (created ${msg.createdAt.toISOString()})`);
+        msg.workerId = undefined;
+        msg.deviceId = undefined;
+        await msg.save();
+        processOutboundJob(msg._id.toString()).catch(e =>
+          console.error(`[STALE] Failed to re-dispatch message ${msg._id}:`, e)
+        );
       }
     } catch (e) {
-      console.error('Error checking stale nodes', e);
+      console.error('Error in stale checker:', e);
     }
-  }, 10000);
+  }, 30000);
 
-  const worker = new Worker(
-    'outboundMessages',
-    async (job) => {
-      const { messageId } = job.data;
-      const result = await processOutboundJob(messageId);
-      if (!result) {
-        throw new Error(`Message ${messageId} not found`);
-      }
-      if (result.status === 'pending' && result.channel !== 'SMS') {
-        throw new Error(`No available connector for ${result.channel}`);
-      }
-      return result;
-    },
-    { connection: connection as any, concurrency: 1 }
-  );
-
-  worker.on('failed', (job, err) => {
-    console.error(`Job ${job?.id} failed:`, err);
-  });
-
-  return worker;
+  return interval;
 };
 
 export function getRedisConnection(): IORedis | null {
   return connection;
 }
+
+let _outboundQueue: Queue | null = null;
+
+export function getOutboundQueue(): Queue | null {
+  if (!_outboundQueue && connection) {
+    _outboundQueue = new Queue('outbound', { connection });
+  }
+  return _outboundQueue;
+}
+
+
+
+export { connection };
