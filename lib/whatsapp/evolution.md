@@ -8,15 +8,9 @@ export async function sendEvolutionTextMessage(
   instanceName: string,
   apiKey: string
 ): Promise<any> {
-  // 1. URL-encode to handle spaces (e.g., "Line 001" becomes "Line%20001")
-  const safeInstanceName = encodeURIComponent(instanceName.trim());
-  const url = `${EVOLUTION_API_BASE_URL}/message/sendText/${safeInstanceName}`;
-
-  // 2. Clean the phone number to contain ONLY digits (strips the + sign)
-  const cleanNumber = to.replace(/\D/g, '');
-
+  const url = `${EVOLUTION_API_BASE_URL}/message/sendText/${instanceName}`;
   const payload = {
-    number: cleanNumber,
+    number: to,
     options: {
       delay: 1200,
       presence: 'composing',
